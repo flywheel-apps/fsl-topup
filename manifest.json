@@ -1,0 +1,58 @@
+{
+  "name": "msot-mouse-rec",
+  "label": "MSOT Mouse Recon",
+  "description": "Reconstructs a MSOT mouse image and performs calculations using a precomputed matrix.",
+  "author": "TUM",
+  "maintainer": "Flywheel <support@flywheel.io>",
+  "license": "MIT",
+  "source": "https://github.com/flywheel-apps/MSOT-mouse-recon/releases/tag/1.0.1",
+  "url": "https://github.com/flywheel-apps/MSOT-mouse-recon",
+  "version": "1.0.1",
+  "environment": {
+    "FLYWHEEL": "/flywheel/v0",
+    "LD_LIBRARY_PATH": "/opt/mcr/v90/runtime/glnxa64:/opt/mcr/v90/bin/glnxa64:/opt/mcr/v90/sys/os/glnxa64:/opt/mcr/v90/extern/bin/glnxa64",
+    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  },
+  "custom": {
+    "gear-builder": {
+      "category": "analysis",
+      "image": "flywheel/msot-mouse-rec:1.0.1"
+    },
+    "flywheel": {
+      "suite": "TUM"
+    }
+  },
+  "inputs": {
+    "key": {
+      "base": "api-key"
+    },
+    "msot": {
+      "base": "file",
+      "description": ".msot file for conversion.  The associated .bin file will be located automatically."
+    },
+    "matrix": {
+      "base": "file",
+      "description": "Precomputed matrix to use in image analysis",
+      "optional": false,
+      "type": {
+        "enum": [
+          "MATLAB data"
+        ]
+      }
+    }
+  },
+  "config": {
+    "gear-log-level": {
+      "default": "INFO",
+      "description": "Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)",
+      "type": "string",
+      "enum": [
+        "ERROR",
+        "WARNING",
+        "INFO",
+        "DEBUG"
+      ]
+    }
+  },
+  "command": "python3 run.py"
+}
