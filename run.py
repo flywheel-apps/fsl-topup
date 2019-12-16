@@ -260,6 +260,7 @@ def run_topup(context,input):
 
     return(out)
 
+
 def apply_warp(context,apply_topup_files,index_list,topup_out):
 
     motion = np.loadtxt('{}_movpar.txt'.format(topup_out))
