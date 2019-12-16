@@ -268,7 +268,7 @@ def apply_warp(context,apply_topup_files,index_list,topup_out):
 
         base = os.path.split(fl)[-1]
         warp = topup_out + '_warpfield_{:02d}.nii.gz'.format(int(ix))
-        m = motion[int(ix)]
+        m = motion[int(ix)-1]
         R = make_mat(m[0], m[1], m[2], m[3], m[4], m[5])
         matout = topup_out + '_temp_mat.txt'
         np.savetxt(matout,R)
