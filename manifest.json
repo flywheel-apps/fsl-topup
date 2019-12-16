@@ -1,42 +1,64 @@
 {
-  "name": "msot-mouse-rec",
-  "label": "MSOT Mouse Recon",
-  "description": "Reconstructs a MSOT mouse image and performs calculations using a precomputed matrix.",
-  "author": "TUM",
+  "name": "fsl-topup",
+  "label": "FSL TOPUP correction for susceptibility induced distortions",
+  "description": "Estimates a distortion correction field given one or more pairs of images with opposite PE directions",
+  "author": "FSL",
   "maintainer": "Flywheel <support@flywheel.io>",
   "license": "MIT",
-  "source": "https://github.com/flywheel-apps/MSOT-mouse-recon/releases/tag/1.0.1",
-  "url": "https://github.com/flywheel-apps/MSOT-mouse-recon",
-  "version": "1.0.1",
+  "source": "https://github.com/flywheel-apps/fsl-topup",
+  "url": "https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/topup",
+  "version": "0.0.0",
   "environment": {
-    "FLYWHEEL": "/flywheel/v0",
-    "LD_LIBRARY_PATH": "/opt/mcr/v90/runtime/glnxa64:/opt/mcr/v90/bin/glnxa64:/opt/mcr/v90/sys/os/glnxa64:/opt/mcr/v90/extern/bin/glnxa64",
-    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   },
   "custom": {
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/msot-mouse-rec:1.0.1"
+      "image": "flywheel/fwl-topup:0.0.0"
     },
     "flywheel": {
-      "suite": "TUM"
+      "suite": "FSL"
     }
   },
   "inputs": {
-    "key": {
-      "base": "api-key"
-    },
-    "msot": {
+    "image_1": {
       "base": "file",
-      "description": ".msot file for conversion.  The associated .bin file will be located automatically."
+      "description": "first image in an pair of images with opposite phase encoding direction",
+      "optional": false
     },
-    "matrix": {
+    "image_2": {
       "base": "file",
-      "description": "Precomputed matrix to use in image analysis",
-      "optional": false,
+      "description": "second image in an pair of images with opposite phase encoding direction",
+      "optional": false
+    },
+    "apply_to_a": {
+      "base": "file",
+      "description": "an image to apply the TOPUP correction to using this fieldmap.  Should have the same PE direction as image 1",
+      "optional": true
+    },
+    "apply_to_b": {
+      "base": "file",
+      "description": "an image to apply the TOPUP correction to using this fieldmap.  Should have the same PE direction as image 2",
+      "optional": true
+    },
+
+    "config_file": {
+      "base": "file",
+      "description": "A configuration file is a text file containing some or all of the parameters that can be specified for topup. The name of the file should be passed as argument to the --config parameter. It should be an ascii-file with one row for each parameter, and where comments (ignored by topup) are preceeded by a #.",
+      "optional": true,
       "type": {
         "enum": [
-          "MATLAB data"
+          "text",""
+        ]
+      }
+    },
+
+    "acquisition_parameters": {
+      "base": "file",
+      "description": "This parameter specifies a text-file that contains information about how the volumes were acquired.",
+      "optional": true,
+      "type": {
+        "enum": [
+          "text",""
         ]
       }
     }
@@ -52,6 +74,23 @@
         "INFO",
         "DEBUG"
       ]
+    },
+    "topup_only": {
+      "default": "INFO",
+      "description": "only run topup and get fieldmaps (do no correct images)",
+      "type": "boolean",
+      "default": false
+
+    },
+    "Save_All": {
+      "default": true,
+      "description": "Save all generated files (motion parameters, intermediate files), or just the fieldmap and any corrected timeseries",
+      "type": "boolean"
+    },
+     "QA": {
+      "default": false,
+      "description": "Save all generated files (motion parameters, intermediate files), or just the fieldmap and any corrected timeseries",
+      "type": "boolean"
     }
   },
   "command": "python3 run.py"

@@ -7,34 +7,18 @@
 
 
 # First start with a python runtime
-FROM flywheel/python:dcmtk.latest
+FROM flywheel/fsl-base:5.0.9-trusty
 
-# Now we'll grab and install the matlab MCR for 2015b
+# This is setting things up for python
 RUN apt-get -qq update && apt-get -qq install -y \
-     unzip \
-     xorg \
-     wget \
-     curl && \
-     mkdir /mcr-install && \
-     mkdir /opt/mcr && \
-     cd /mcr-install && \
-     wget http://ssd.mathworks.com/supportfiles/downloads/R2015b/deployment_files/R2015b/installers/glnxa64/MCR_R2015b_glnxa64_installer.zip && \
-     cd /mcr-install && \
-     unzip -q MCR_R2015b_glnxa64_installer.zip && \
-     ./install -destinationFolder /opt/mcr -agreeToLicense yes -mode silent && \
-     cd / && \
-     rm -rf mcr-install && \
-     pip3 install --upgrade pip
-
-# Really weird bug, setting LD_LIBRARY_PATH breaks pip, so run all the pip stuff before setting that.
-COPY requirements.txt ./requirements.txt
-RUN pip3 install -r requirements.txt
-
-RUN rm -rf /root/.cache/pip && \
+    software-properties-common \
+    python3-numpy \
+    libreadline-gplv2-dev libncursesw5-dev libssl-dev  libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Configure environment variables for MCR
-ENV LD_LIBRARY_PATH /opt/mcr/v90/runtime/glnxa64:/opt/mcr/v90/bin/glnxa64:/opt/mcr/v90/sys/os/glnxa64:/opt/mcr/v90/extern/bin/glnxa64
+COPY requirements.txt ./requirements.txt
+RUN pip3 install -r requirements.txt && rm -rf /root/.cache/pip
+
 
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
@@ -43,12 +27,4 @@ WORKDIR ${FLYWHEEL}
 # Save the environment for later use in the Run script (run.py)
 RUN python3 -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
 
-#---- Divergent from standard Gear environemnt ----#
-
-# Copy over a required supporting directory for this particular gear
-COPY libs/com.itheramedical.msotlib_beta_rev157/ ${FLYWHEEL}/libs/com.itheramedical.msotlib_beta_rev157/
-
-# Pull in files required for runtime
-COPY run_MSOT_standalone.sh ${FLYWHEEL}/run_MSOT_standalone.sh
-COPY MSOT_standalone ${FLYWHEEL}/MSOT_standalone
 COPY run.py ${FLYWHEEL}/run.py

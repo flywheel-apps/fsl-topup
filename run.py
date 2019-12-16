@@ -13,6 +13,9 @@ import logging
 import flywheel
 from subprocess import Popen, PIPE, STDOUT
 import time
+from common import exec_command, build_command_list
+import nibabel as nb
+import numpy as np
 
 
 ##-------- Standard Flywheel Gear Structure --------##
@@ -20,13 +23,6 @@ flywheelv0 = "/flywheel/v0"
 environ_json = '/tmp/gear_environ.json'
 
 ##--------    Gear Specific files/folders   --------##
-mcr_root = "/opt/mcr/v90"                                              # The location of the MATLAB 2015b runtime
-msot_lib = os.path.join(flywheelv0,'libs')                             # The location of the msotlib_beta_rev157 library
-default_pcmm = os.path.join('/tmp','precomputed_matrix.mat')            # The location of the precomputed model matrix
-run_standalone = os.path.join(flywheelv0,'run_MSOT_standalone.sh')
-
-# Setup Flywheel client:?
-
 
 
 def exists(file, log, ext=-1, is_expected=True, quit_on_error=True):
@@ -120,212 +116,227 @@ def set_environment(log):
     return environ
 
 
-def find_bin_file(context,log):
+def make_mat(tx,ty,tz,rx,ry,rz):
+    R_x = np.matrix([[1, 0, 0, 0],
+                     [0, np.cos(rx), np.sin(rx), 0],
+                     [0, -np.sin(rx), np.cos(rx), 0],
+                     [0, 0, 0, 1]
+                     ])
 
-    # Finds the binary file associated with the .msot header for reconstruction
-    # The initial assumption is that it has the same file name, but with a ".bin" extension
-    # If this assumption does not hold, it looks for any file in the session with a ".bin" extension
-    # If it finds a ".bin" file with a different base name, it warns the user and proceeds.
-    # Otherwise it ends with an error and exits
-    #
-    # msot -   the .msot file used as input for the gear.  This function expects a ".bin" file with a base name
-    #          identical to this input's base name
-    #
-    # context -The gear's context
-    #
-    # log -    The gear's log for tracking progress
+    R_y = np.matrix([[np.cos(ry), 0, -np.sin(ry), 0],
+                     [0, 1, 0, 0],
+                     [np.sin(ry), 0, np.cos(ry), 0],
+                     [0, 0, 0, 1]
+                     ])
 
-    # get the flywheel client
-    fw = context.client
+    R_z = np.matrix([[np.cos(rz), np.sin(rz), 0, 0],
+                     [-np.sin(rz), np.cos(rz), 0, 0],
+                     [0, 0, 1, 0],
+                     [0, 0, 0, 1]
+                     ])
 
-    # Extract the input file's flywheel ID:
-    msot = context.get_input_path('msot')
-    msot_path, msot_ext = os.path.splitext(msot)
-    msot_base = os.path.split(msot_path)[-1]
+    R = R_x*R_y*R_z
 
-    msot_id = context.get_input('msot')['hierarchy']['id']
-    id_type = context.get_input('msot')['hierarchy']['type']
+    R[0, -1] = tx
+    R[1, -1] = ty
+    R[2, -1] = tz
 
+    return(R)
 
-    if not id_type == 'acquisition':
-        raise Exception('.msot input file must be a file in an acquisition')
-
-    # I tried to lookup a specific file, but was having trouble finding an API call for that, so there's this mess:
-    # Get the acquisitions and extract the files:
-    acq = fw.get_acquisition(acquisition_id=msot_id)
-    acq_files = acq.reload().files
-
-    match = -1
-
-    # Loop through the files in the acquisition:
-    for f in acq_files:
-        f_name = f['name']
-        base, ext = os.path.splitext(f_name)
-
-        # If we find an exact match, return that immediately
-        if base == msot_base and ext == ".bin":
-            log.info('Found {}, continuing with computations'.format(f_name))
-            match = f
-            exact = True
-            break
-
-        # If we find a partial match (.bin file but not named correctly), make sure we've looked at every file
-        # And then return the partial matrh
-        elif ext == ".bin":
-            exact = False
-            match = f
-
-    # If we found no match, exit with an error
-    if match == -1:
-        raise Exception('ERROR: No associated .bin file found in this subjects acquisition')
-
-    # If we found a partial match, return that and try to run
-    if not exact:
-        log.warning('WARNING: Found {}, however this does not match the file base name of the .msot file: {}.  Attempting...'.format(f_name, msot_base))
+def is4D(image):
+    shape = nb.load(image).header.get_data_shape()
+    if len(shape) < 4:
+        return(False)
+    elif shape[3] > 1:
+        return(True)
+    else:
+        return(False)
 
 
-    # Now try to copy in the file:
-    try:
-        bin_dir = os.path.join(flywheelv0, 'input', 'bin')
-
-        if os.path.isfile(bin_dir):
-            os.remove(bin_dir)
-
-        log.debug('Making bin dir')
-        os.makedirs(bin_dir, exist_ok=True)
-        log.debug('Done')
-
-        bin_file = os.path.join(bin_dir, match['name'])
-        log.debug('Bin File: {}'.format(bin_file))
-        log.info('Atempting to copy {} to inputs'.format(bin_file))
-        acq.download_file(match['name'], bin_file)
-
-    except Exception as e:
-        context.log.fatal('Reading in associated .bin file failed', )
-        context.log.exception(e)
-        raise
-
-    log.info('Success')
-
-    # Now Collect and print out all necessary information:
-    sub_id  = fw.get_subject(subject_id=acq.parents.subject).label
-    sess_id = fw.get_session(session_id=acq.parents.session).label
-    proj_id = fw.get_project(project_id=acq.parents.project).label
-    created = match.created.ctime()
-    flywheel_id = match.id
-    size = match.size
-
-    byte_to_megabyte = 1048576
-    size = size / byte_to_megabyte
-
-    flywheel_bin_path = os.path.join(proj_id,sess_id,sub_id,match['name'])
-    log.info('##-------------      .bin file info      -------------##')
-    log.info('.bin file used:\t{}'.format(flywheel_bin_path))
-    log.info('created:\t{}'.format(created))
-    log.info('flywheel id:\t{}'.format(flywheel_id))
-    log.info('file size:\t{} Mb'.format(size))
-    log.info('##----------------------------------------------------##')
 
 
-    return bin_file
+def check_inputs(context):
+
+    log=logging.getLogger()
+    apply_to_files=[]
+    index_list=[]
+
+    image1_path = context.get_input_path('image_1')
+    image2_path = context.get_input_path('image_2')
+    config_path = context.get_input_path('config_file')
+    apply_to_a = context.get_input_path('apply_to_a')
+    apply_to_b = context.get_input_path('apply_to_b')
+    acq_par = context.get_input_path('acquisition_parameters')
+
+    if is4D(image1_path):
+        apply_to_files.append(image1_path)
+        index_list.append('1')
+        log.info('Will run applytopup on {}'.format(image1_path))
+    if is4D(image2_path):
+        apply_to_files.append(image2_path)
+        index_list.append('2')
+        log.info('Will run applytopup on {}'.format(image2_path))
+    if apply_to_a:
+        apply_to_files.append(apply_to_a)
+        index_list.append('1')
+        log.info('Will run applytopup on {}'.format(apply_to_a))
+    if apply_to_b:
+        apply_to_files.append(apply_to_b)
+        index_list.append('2')
+        log.info('Will run applytopup on {}'.format(apply_to_b))
+
+    parameters = open(acq_par,'r')
+    log.info(parameters.read())
+    parameters.close()
+
+    if config_path:
+        log.info('Using config settings in {}'.format(config_path))
+        parameters = open(config_path,'r')
+        log.info(parameters.read())
+        parameters.close()
+    else:
+        log.info('Using default config values')
+
+    return(apply_to_files,index_list)
+
+
+
+def generate_topup_input(context):
+
+    log=logging.getLogger()
+
+    image1_path = context.get_input_path('image_1')
+    image2_path = context.get_input_path('image_2')
+    work_dir = context.work_dir
+
+    base_out1 = os.path.join(work_dir, 'Image1')
+    if is4D(image1_path):
+        im_name = os.path.split(image1_path)[-1]
+        log.info('Using volume 1 in 4D image {}'.format(im_name))
+
+        cmd = ['fslroi', image1_path, base_out1, '0', '1']
+    else:
+        cmd = ['fslmaths',image1_path,base_out1]
+    exec_command(context, cmd)
+
+
+    base_out2 = os.path.join(work_dir, 'Image2')
+    if is4D(image2_path):
+        im_name = os.path.split(image2_path)[-1]
+        log.info('Using volume 1 in 4D image {}'.format(im_name))
+
+        cmd = ['fslroi', image2_path, base_out2, '0', '1']
+    else:
+        cmd = ['fslmaths', image2_path, base_out2]
+    exec_command(context, cmd)
+
+
+    merged = os.path.join(work_dir, 'topup_vols')
+    cmd = ['fslmerge', '-t', merged, base_out1, base_out2]
+    exec_command(context, cmd)
+
+    return(merged)
+
+def run_topup(context,input):
+
+    output_dir = context.output_dir
+    config_path = context.get_input_path('config_file')
+    acq_par = context.get_input_path('acquisition_parameters')
+
+    fout = os.path.join(output_dir, 'topup_out_fmap')
+    dfout = os.path.join(output_dir,'topup_out_warpfield')
+    iout = os.path.join(output_dir, 'topup_out_corrected')
+    out = os.path.join(output_dir, 'topup_out')
+
+
+    if config_path:
+        cmd = ['topup', '--imain={}'.format(input), '--datain={}'.format(acq_par), '--out={}'.format(out),
+           '--iout={}'.format(iout), '--fout={}'.format(fout), '--config={}'.format(config_path),'--dfout={}'.format(dfout)]
+
+    else:
+        cmd = ['topup', '--imain={}'.format(input), '--datain={}'.format(acq_par), '--out={}'.format(out),
+               '--iout={}'.format(iout), '--fout={}'.format(fout), '--fwhm=0','--dfout={}'.format(dfout)]
+    exec_command(context, cmd)
+
+    return(out)
+
+def apply_warp(context,apply_topup_files,index_list,topup_out):
+
+    motion = np.loadtxt('{}_movpar.txt'.format(topup_out))
+
+    for fl, ix in zip(apply_topup_files, index_list):
+
+        base = os.path.split(fl)[-1]
+        warp = topup_out + '_warpfield_{:02d}.nii.gz'.format(int(ix))
+        m = motion[int(ix)]
+        R = make_mat(m[0], m[1], m[2], m[3], m[4], m[5])
+        matout = topup_out + '_temp_mat.txt'
+        np.savetxt(matout,R)
+        cmd = ['applywarp',
+               '--in={}'.format(fl),
+               '--ref={}'.format(fl),
+               '--warp={}'.format(warp),
+               '--premat={}'.format(matout),
+               '--out={}'.format(os.path.join(context.output_dir, 'topup_corrected_{}'.format(base)))]
+
+        exec_command(context, cmd)
+
+
+
+def apply_topup(context,apply_topup_files,index_list,topup_out):
+
+    acq_par = context.get_input_path('acquisition_parameters')
+    for fl, ix in zip(apply_topup_files, index_list):
+        base = os.path.split(fl)[-1]
+        cmd = ['applytopup',
+               '--imain={}'.format(fl),
+               '--datain={}'.format(acq_par),
+               '--inindex={}'.format(ix),
+               '--topup={}'.format(topup_out),
+               '--out={}'.format(os.path.join(context.output_dir, 'topup_corrected_{}'.format(base)))]
+
+        exec_command(context, cmd)
+
 
 
 def main():
+
     # shutil.copy('config.json','/flywheel/v0/output/config.json')
     with flywheel.gear_context.GearContext() as gear_context:
 
-
-        #### Setup logging as per SSE best practices (Thanks Andy!)
+        #### Setup logging as per SSE best practices
         fmt = '%(asctime)s %(levelname)8s %(name)-8s - %(message)s'
         logging.basicConfig(level=gear_context.config['gear-log-level'], format=fmt)
-
-        log = logging.getLogger('[flywheel/MSOT-mouse-recon]')
-
+        log = logging.getLogger('[flywheel/fwl-topup]')
         log.info('log level is ' + gear_context.config['gear-log-level'])
-
         gear_context.log_config()  # not configuring the log but logging the config
 
         # Now let's set up our environment from the .json file stored in the docker image:
         environ = set_environment(log)
-        os.environ['MRC_ROOT'] = mcr_root # Not entirely sure if I need this
         output_dir = gear_context.output_dir
+        work_dir = gear_context.work_dir
 
-        # Now we need to extract our input files, and check if they exist
-        msot = gear_context.get_input_path('msot')
-        exists(msot, log)
+        work_dir = output_dir
+        os.makedirs(work_dir, exist_ok=True)
 
-        # Now make sure they're the correct filetype
-        msot_path, msot_ext = os.path.splitext(msot)
-        msot_base = os.path.split(msot_path)[-1]
+        log.info('Checking inputs')
+        apply_to_files,index_list = check_inputs(gear_context)
 
-        #####################################################################
-        # Using the .msot input, we will look for the associated binary file:
-        try:
-            bin = find_bin_file(gear_context, log)
-        except Exception as e:
-            gear_context.log.exception(e)
-            gear_context.log.fatal('bin file import failed')
-            os.sys.exit(1)
-        #####################################################################
+        log.info('Generating topup input')
+        topup_input = generate_topup_input(gear_context)
 
-        # Check if a new matrix flag was set
-        pcmm = gear_context.get_input_path('matrix')
-
-        #####################################################################
-        # First make sure it exists and all that
-        try:
-            exists(pcmm, log, '.mat')
-            exists(bin, log, '.bin')
-        except Exception as e:
-            gear_context.log.exception(e)
-            gear_context.log.fatal('failed to locate input')
-            os.sys.exit(1)
-        #####################################################################
-
-        bin_path, bin_ext = os.path.splitext(bin)
-        bin_base = os.path.split(bin_path)[-1]
+        log.info('Running Topup')
+        topup_out = run_topup(gear_context, topup_input)
 
 
-        if msot_ext != '.msot':
-            log.error('Incorrect file type for input {}, expected .msot, got {}'.format(msot,msot_ext))
-            sys.exit(1)
-        if bin_ext != '.bin':
-            log.error('Incorrect file type for input {}, expected .msot, got {}'.format(msot,msot_ext))
-            sys.exit(1)
-
-        if msot_base != bin_base:
-            log.warning('WARNING: file names for .bin and .msot do not match.  Flywheel will rename the .bin file to match')
-            log.warning('Ensure that the files are correct and from the same acquisition.  This may cause errors in the pipeline')
-
-        shutil.copy(bin, '{}.bin'.format(msot_path))
-
-        # The standalone code could be called here, however we're going to use the provided run_MSOT_standalone file
-        # to call it for us.  This is because the run_MSOT_standalone.sh file takes a human readable call and makes it
-        # into the ugly format the standalone uses.  Readable code is good code.
-        log.info('Calling {} {} {} {} {} {}'.format(run_standalone, mcr_root, msot_lib, pcmm, msot, output_dir))
-
-        #
-        # result = sp.run([run_standalone, mcr_root, msot_lib, pcmm, msot, output_dir], stdout=sp.PIPE, stderr=sp.PIPE,
-        #        universal_newlines=True)
-
-        result = sp.Popen([run_standalone, mcr_root, msot_lib, pcmm, msot, output_dir], stdout=sp.PIPE, stderr=sp.PIPE,
-               universal_newlines=True, shell=False)
+        if not gear_context.config['topup_only']:
+            log.info('Applying Topup Correction')
+            #apply_topup(gear_context, apply_to_files, index_list, topup_out)
+            apply_warp(gear_context, apply_to_files, index_list, topup_out)
 
 
-        while True:
-            line = result.stdout.readline()
-            if not line: break
-            else:
-                log.info(line)
-
-        if result.poll() != 0:
-            er = result.stderr.read()
-            log.info(er)
-            raise Exception(er)
-        else:
-            log.info('Completed successfully')
 
 
-# This could all be smarter, especially with error/exception handling.
+
 if __name__ == "__main__":
     main()
