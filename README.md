@@ -50,12 +50,13 @@ Depending on the settings in the gear's conguration, you will have some of the f
 
 
 #### *Constant Output*
+```
 * topup_log.txt: topup's log file
 * topup_fmap.nii.gz: output-file containing the off-resonance field.
 * topup_fieldcoef.nii.gz: output-files containing the spline coefficients for the off-resonance field
 * topup_movpar.txt: The transformation parameters to fit **image_2** to **image_1**
 * topup_input_corrected.nii.gz: The corrected version of the merged **image_1** and **image_2** used for topup's *--imain* input option
-
+```
 
 #### *Output with **apply_to_X** options, and **topup_only** is false*
 * topup_corrected_<apply_to_1>.nii.gz: Topup corrected image from **apply_to_1**
