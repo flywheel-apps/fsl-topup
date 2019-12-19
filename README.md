@@ -97,8 +97,8 @@ The QA image for this gear will resemble the following:
 
 ![QA example](https://github.com/flywheel-apps/fsl-topup/blob/parker-dev/QA/nodif_QA_report.png "QA example")
 
-The top image is the original input, with a red overlay of the topup-corrected brain boarder outline.1
+The top image is the original input, with a red overlay of the topup-corrected brain boarder outline.
 
-The bottom image is the topup corrected image, with a red overlay of the original image brain boarder outline.1
+The bottom image is the topup corrected image, with a red overlay of the original image brain boarder outline.
 
 Ideally, you should see improvement in the shape of the brain's outline, correcting for major distortions such as the one in the front of the brain in the far right image.1
