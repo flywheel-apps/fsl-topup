@@ -115,7 +115,7 @@
 
      "QA": {
       "default": true,
-      "description": "Save all generated files (motion parameters, intermediate files), or just the fieldmap and any corrected timeseries",
+      "description": "Save a topup QA image comparing distorted to corrected images",
       "type": "boolean"
     }
   },
