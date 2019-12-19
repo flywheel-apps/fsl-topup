@@ -95,4 +95,4 @@ The top image is the original input, with a red overlay of the topup-corrected b
 
 The bottom image is the topup corrected image, with a red overlay of the original image brain boarder outline.
 
-Ideally, you should see improvement in the shape of the brain's outline, correcting for major distortions such as the one in the front of the brain in the far right image.1
+Ideally, you should see improvement in the shape of the brain's outline, correcting for major distortions such as the one in the front of the brain in the far right
