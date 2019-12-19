@@ -112,6 +112,23 @@ def set_environment(log):
     # Pass back the environ dict in case the run.py program has need of it later on.
     return environ
 
+def is4D(image):
+    """
+    Checks to see if a given image is 4D
+    Args:
+        image (str): path to image
+
+    Returns:
+        (bool): true if image is 4d, false otherwise.
+
+    """
+    shape = nb.load(image).header.get_data_shape()
+    if len(shape) < 4:
+        return(False)
+    elif shape[3] > 1:
+        return(True)
+    else:
+        return(False)
 
 
 def check_inputs(context):
