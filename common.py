@@ -61,7 +61,7 @@ def exec_command(context, command, shell=False, stdout_msg=None, cont_output=Fal
     - cont_output: Used to provide continuous output of stdout without waiting
                    until the completion of the shell command
     """
-    log = logging.getLogger()
+    log = logging.getLogger('[flywheel/fsl-topup/common/exec_command]')
     log.info('Executing command: \n' + ' '.join(command) + '\n\n')
 
     if shell:

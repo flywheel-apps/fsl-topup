@@ -3,7 +3,7 @@
 # runtime will be installed and in which stand-alone Matlab routines (such as
 # those created with Matlab's deploytool) can be executed.
 #
-# See http://www.mathworks.com/products/compiler/mcr/ for more info.
+
 
 
 # First start with a python runtime
@@ -16,6 +16,7 @@ RUN apt-get -qq update && apt-get -qq install -y \
     libreadline-gplv2-dev libncursesw5-dev libssl-dev  libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+COPY b02b0.cnf /flywheel/v0/b02b0.cnf
 COPY requirements.txt ./requirements.txt
 RUN pip3 install -r requirements.txt && rm -rf /root/.cache/pip
 
