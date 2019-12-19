@@ -22,22 +22,19 @@ environ_json = '/tmp/gear_environ.json'
 def exists(file, log, ext=-1, is_expected=True, quit_on_error=True):
     """
     Generic 'if exists' function that checks for files/folders and takes care of logging in the event of
-    nonexistance.
-
-    :param file: the file or folder to check for existence
-    :type file: str
-    :param log: the python logger being used to output log messages to
-    :type log: class:`logging.RootLogger`
-    :param ext: the extension that's expected to be on the file
-    :type ext: Union[str, int], optional
-    :param is_expected: indicate if we expect the file/folder to exist (True), or not (false)
-    :type is_expected: bool
-    :param quit_on_error: indicate if this file is critical for the performance of the code, and raise exception if
+    Args:
+        file (str): the file or folder to check for existence
+        log (class:`logging.Logger`): the python logger being used to output log messages to
+        ext (Union[str, int], optional): the extension that's expected to be on the file
+        is_expected (bool): indicate if we expect the file/folder to exist (True), or not (false)
+        quit_on_error (bool): indicate if this file is critical for the performance of the code, and raise exception if
     the conditions set by the previous variables aren't met
-    :type quit_on_error: bool
-    :return: path_exists, true or false if the path is as expected
-    :rtype: bool
+
+    Returns:
+        path_exists (bool): true or false if the path is as expected
+
     """
+
 
     path_exists = os.path.exists(file)
 
@@ -89,6 +86,15 @@ def exists(file, log, ext=-1, is_expected=True, quit_on_error=True):
 
 
 def set_environment(log):
+    """
+    Sets up the docker environment saved in a environment.json file
+    Args:
+        log (class:`logging.Logger`):
+
+    Returns:
+        environ (json): the environment variables in json format
+    """
+
     # Let's ensure that we have our environment .json file and load it up
     exists(environ_json, log)
 
@@ -106,43 +112,6 @@ def set_environment(log):
     # Pass back the environ dict in case the run.py program has need of it later on.
     return environ
 
-
-def make_mat(tx, ty, tz, rx, ry, rz):
-    R_x = np.matrix([[1, 0, 0, 0],
-                     [0, np.cos(rx), np.sin(rx), 0],
-                     [0, -np.sin(rx), np.cos(rx), 0],
-                     [0, 0, 0, 1]
-                     ])
-
-    R_y = np.matrix([[np.cos(ry), 0, -np.sin(ry), 0],
-                     [0, 1, 0, 0],
-                     [np.sin(ry), 0, np.cos(ry), 0],
-                     [0, 0, 0, 1]
-                     ])
-
-    R_z = np.matrix([[np.cos(rz), np.sin(rz), 0, 0],
-                     [-np.sin(rz), np.cos(rz), 0, 0],
-                     [0, 0, 1, 0],
-                     [0, 0, 0, 1]
-                     ])
-
-    R = R_x * R_y * R_z
-
-    R[0, -1] = tx
-    R[1, -1] = ty
-    R[2, -1] = tz
-
-    return (R)
-
-
-def is4D(image):
-    shape = nb.load(image).header.get_data_shape()
-    if len(shape) < 4:
-        return (False)
-    elif shape[3] > 1:
-        return (True)
-    else:
-        return (False)
 
 
 def check_inputs(context):

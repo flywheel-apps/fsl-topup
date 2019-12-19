@@ -3,18 +3,24 @@
 import os
 import subprocess as sp
 import logging
-import flywheel
 import matplotlib.pyplot as pl
 import matplotlib.image as mpm
 
 fsldir='/usr/lib/fsl/5.0'
 
-def bet(image,workdir='',shell=False):
+def bet(image,workdir,shell=False):
+    """
+    Runs fsl's bet2 on an image and saves the results in workdir
+    Args:
+        image (str): path to the image to run bet2 on
+        workdir (str): path for bet2 output (used to generate <output_fileroot> option in bet2
+        shell (bool): pass the shell into the bet2 subprocess command
+    Returns:
+        bet_out (str): path to bet2's <output_fileroot> (currently "workdir"/bet
+    """
 
-    if workdir == '':
-        workdir = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work'
 
-    shell=True
+
     com_cmd=['{}/fslstats'.format(fsldir),image, '-C']
     print(' '.join(com_cmd))
     com_cmd=' '.join(com_cmd)
@@ -41,6 +47,18 @@ def bet(image,workdir='',shell=False):
 
 
 def bet_2_outline(original,bet_root,shell=False):
+    """
+    Takes a bet2 extracted image and it's original, and creates a mask of the outline.  Requires that the "-o" option
+    was used during bet2 to generate an overlay image.
+    Args:
+        original (str): path to the original image that bet2 was performed on
+        bet_root (str): path to the bet2 root (the <output_fileroot> option used in bet2)
+        shell (bool): use the shell in the subprocess commands
+
+    Returns:
+        bin_out (str): path to the binary bet2 outline mask.
+
+    """
 
     overlay = bet_root+'_overlay.nii.gz'
     diff_out = bet_root+'_diff'
@@ -87,10 +105,21 @@ def bet_2_outline(original,bet_root,shell=False):
     return(bin_out)
 
 
-def erode_mask(mask,out,shell=False):
-    cmd = ['fslmaths',mask,'-ero','-sub',mask,'-mul','-1']
 
 def overlay(image1,image2,output,shell=False):
+    """
+    creates an overlay of image 2 over image1.  Saves three .pngs of the overlay (one along each plane), and merges
+    them into one single .png file
+    Args:
+        image1 (str): path to image1
+        image2 (str): path to image2
+        output (str): path to save merged overlays to
+        shell (bool): include the shell in the subprocess commands or not
+
+    Returns:
+
+    """
+
     cmd=['overlay','0','0',image1,'-a',image2,'0.001','5',output]
     print(' '.join(cmd))
     result = sp.Popen(cmd, stdout=sp.PIPE, stderr=sp.PIPE,
@@ -128,7 +157,19 @@ def overlay(image1,image2,output,shell=False):
     print(err)
 
 
-def outline_overlay(background='', outline='', name=''):
+def outline_overlay(background, outline, name=''):
+    """
+    Generates a .png image of one image's BET extracted brain outline over another image.  Each image containes three
+    overlay views: one along each plane (Cor, Sag, Tra).
+    Args:
+        background (str): path to the backround image
+        outline (str): path to the image who's BET extracted brain is outlined and overlayed on 'background'
+        name (str): The name to save the final image as
+
+    Returns:
+
+    """
+
 
     bg_dir, bg_base = os.path.split(background)
     ol_dir, ol_base = os.path.split(outline)
@@ -144,13 +185,24 @@ def outline_overlay(background='', outline='', name=''):
     workdir = os.path.join(work_base, 'outline_work')
     os.makedirs(workdir, exist_ok=True)
 
-    bet_out = bet(outline, workdir)
+    bet_out = bet(outline, workdir, True)
 
     mask_outline = bet_2_outline(outline, bet_out, shell=False)
     overlay(background, mask_outline, name, shell=False)
 
 
 def plot_overlays(files, titles, output):
+    """
+    Takes any number N of .png files, each with an associated title, and plots them together in a Nx1 subplot.
+    Args:
+        files (list): list of paths to .png images to include in the plot (ordered)
+        titles (list): list of titles to assign to each plot
+        output (str): the output name to save the image as
+
+    Returns:
+
+    """
+
     log = logging.getLogger('[flywheel/fsl-topup/mri_qa/plot_overlays]')
     if not len(files) == len(titles):
         log.warning('Number of files different than number of provided titles')
@@ -173,6 +225,19 @@ def plot_overlays(files, titles, output):
     pl.close()
 
 def generate_topup_report(original_image, corrected_image, output_base=''):
+    """
+    Taking an original and topup corrected image, this creates a QA report image by overlaying an outline of the topup
+    corrected image over the original, as well as overlaying an outline of the original image over the topup corrected
+    image.  Three slices are taken from the center of the image, along each plane of acquistion (Sag, Cor, Tra)
+    Args:
+        original_image (str): path to original image
+        corrected_image (str): path to TOPUP fixed image
+        output_base (str): base directory for output files
+
+    Returns:
+        report_out (str): The path to the final QA image
+    """
+
     log = logging.getLogger('[flywheel/fsl-topup/mri_qa/generate_topup_report]')
 
     path, original_base = os.path.split(original_image)
@@ -193,11 +258,12 @@ def generate_topup_report(original_image, corrected_image, output_base=''):
     log.info('generating report')
     report_out = os.path.join(output_base,'{}_QA_report.png'.format(original_base))
     plot_overlays([name1, name2], ['topup (red) over original', 'original (red) over topup'], report_out)
+
     return(report_out)
 
 
-if __name__ == '__main__':
 
+def debug():
     background = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/Image1.nii.gz'
     outline = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/output/topup_corrected_nodif.nii.gz'
     name1 = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/topup_over_orig'
@@ -208,6 +274,11 @@ if __name__ == '__main__':
 
     report_out = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/report_out.png'
     plot_overlays([name1,name2], ['topup (red) over original','original (red) over topup'], report_out)
+
+
+if __name__ == '__main__':
+    debug()
+
 
 
 
