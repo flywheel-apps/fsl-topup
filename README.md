@@ -43,40 +43,73 @@ The gear always runs topup with the *--out*, *--fout*, and *--iout* options.
 * **QA** Save a topup QA image comparing distorted to corrected images
 
 
+
 ### Outputs
 
 Depending on the settings in the gear's conguration, you will have some of the following files:
 
+
 *Constant Output*
+
 topup_log.txt: topup's log file
+
 topup_fmap.nii.gz: output-file containing the off-resonance field.
+
 topup_fieldcoef.nii.gz: output-files containing the spline coefficients for the off-resonance field
+
 topup_movpar.txt: The transformation parameters to fit **image_2** to **image_1**
+
 topup_input_corrected.nii.gz: The corrected version of the merged **image_1** and **image_2** used for topup's *--imain* input option
 
+
 *Output with **apply_to_X** options, and **topup_only** is false*
+
 topup_corrected_<apply_to_1>.nii.gz: Topup corrected image from **apply_to_1**
+
 topup_corrected_<apply_to_2>.nii.gz: Topup corrected image from **apply_to_2**
+
 * *note that if **image_1** and **image_2** are 4D, there will be additional files like these, which are the corrected inputs.  The basename for each input image is appended to the end of 'topup_corrected' *
 
+
 *Output with **QA***
+
 <image_1>_ QA_report.png: QA image from **image_1**
+
 <image_2>_ QA_report.png: QA image from **image_2**
+
 *Presently only runs on files that have been corrected with topup.  Won't work if **topup_only** is true*
 
+
 *Output with **displacement_field***
+
 topup_dfield_01.nii.gz: warp field for **image_1**
+
 topup_dfield_02.nii.gz: warp field for **image_2**
 
+
 *Output with **jacobian_determinants***
+
 topup_jacdet_01.nii.gz: jacobian determinants for **image_1**
+
 topup_jacdet_02.nii.gz: jacobian determinants for **image_2**
 
+
 *Output with **rigid_body_matrix***
+
 topup_rbmat_01.mat: rigid body transformation parameters to fit **image_1** to **image_1** (should be identity)
+
 topup_rbmat_02.mat: rigid body transformation parameters to fit **image_2** to **image_1**
 
 
+
 #### QA
+
 The QA image for this gear will resemble the following:
 
+![QA example](https://github.com/flywheel-apps/fsl-topup/blob/parker-dev/QA/nodif_QA_report.png "QA example")
+
+The top image is the original input, with a red overlay of the topup-corrected brain boarder outline.1
+
+The bottom image is the topup corrected image, with a red overlay of the original image brain boarder outline.1
+
+Ideally, you should see improvement in the shape of the brain's outline, correcting for major distortions such as the one in the front of the brain in the far right image.1
