@@ -19,72 +19,6 @@ environ_json = '/tmp/gear_environ.json'
 ##--------    Gear Specific files/folders   --------##
 
 
-def exists(file, log, ext=-1, is_expected=True, quit_on_error=True):
-    """
-    Generic 'if exists' function that checks for files/folders and takes care of logging in the event of
-    Args:
-        file (str): the file or folder to check for existence
-        log (class:`logging.Logger`): the python logger being used to output log messages to
-        ext (Union[str, int], optional): the extension that's expected to be on the file
-        is_expected (bool): indicate if we expect the file/folder to exist (True), or not (false)
-        quit_on_error (bool): indicate if this file is critical for the performance of the code, and raise exception if
-    the conditions set by the previous variables aren't met
-
-    Returns:
-        path_exists (bool): true or false if the path is as expected
-
-    """
-
-
-    path_exists = os.path.exists(file)
-
-    # If we find the file and are expecting to
-    if path_exists and is_expected:
-        log.info('located {}'.format(file))
-
-    # If we don't find the file and are expecting to
-    elif not path_exists and is_expected:
-        # and if that file is critical
-        if quit_on_error:
-            # Quit the program
-            raise Exception('Unable to locate {} '.format(file))
-
-            # Otherwise, we'll manage.  Keep on trucking.
-        else:
-            log.warning('Unable to locate {} '.format(file))
-
-    # If we don't find the file and we weren't expecting to:
-    elif not path_exists and not is_expected:
-        # Then we're all good, keep on trucking
-        log.info('{} is not present or has been removed successfully'.format(file))
-
-    # If we don't expect the file to be there, but it is...DUN DUN DUNNNN
-    elif path_exists and not is_expected:
-        # and if that file is critical
-        if quit_on_error:
-            # Well, you know the drill by now.
-            raise Exception('file {} is present when it must be removed'.format(file))
-        else:
-            log.warning('file {} is present when it should be removed'.format(file))
-
-    # Now we'll check the file extension (if desired)
-    if isinstance(ext, str):
-        ext_period = ext.count('.')
-        file_name = os.path.split(file)[-1]
-        div_by_period = file_name.split('.')
-
-        if len(div_by_period) <= ext_period:
-            raise Exception('Extension {} too long for file {}'.format(ext, file_name))
-
-        file_ext = div_by_period[-ext_period:]
-        file_ext = '.' + '.'.join(file_ext)
-
-        if not file_ext == ext:
-            raise Exception('Incorrect file type for input {}, expected {}, got {}'.format(file, ext, file_ext))
-
-    return path_exists
-
-
 def set_environment(log):
     """
     Sets up the docker environment saved in a environment.json file
@@ -149,6 +83,7 @@ def check_inputs(context):
     apply_to_files = []
     index_list = []
 
+    # Capture all the inputs from the gear context
     image1_path = context.get_input_path('image_1')
     image2_path = context.get_input_path('image_2')
     config_path = context.get_input_path('config_file')
@@ -156,26 +91,37 @@ def check_inputs(context):
     apply_to_b = context.get_input_path('apply_to_2')
     acq_par = context.get_input_path('acquisition_parameters')
 
+    # If image_1 is 4D, we will apply topup correction to the entire series after running topup
     if is4D(image1_path):
         apply_to_files.append(image1_path)
-        index_list.append('1')
+        index_list.append('1') # Referring to the row this image is associated with in the "acquisition_parameters" file
         log.info('Will run applytopup on {}'.format(image1_path))
+
+    # If image_2 is 4D, we will apply topup correction to the entire series after running topup
     if is4D(image2_path):
         apply_to_files.append(image2_path)
         index_list.append('2')
         log.info('Will run applytopup on {}'.format(image2_path))
+
+    # If apply_to_a is provided, applytopup to this image, too.
+    # NOTE that apply_to_a must correspond to row 1 in the acquisition_parameters file
     if apply_to_a:
         apply_to_files.append(apply_to_a)
         index_list.append('1')
         log.info('Will run applytopup on {}'.format(apply_to_a))
+
+    # If apply_to_b is provided, applytopup to this image, too.
+    # NOTE that apply_to_b must correspond to row 1 in the acquisition_parameters file
     if apply_to_b:
         apply_to_files.append(apply_to_b)
         index_list.append('2')
         log.info('Will run applytopup on {}'.format(apply_to_b))
 
+    # Read in the parameters and print them to the log
     parameters = open(acq_par, 'r')
     log.info(parameters.read())
     parameters.close()
+
 
     if config_path:
         log.info('Using config settings in {}'.format(config_path))
@@ -199,20 +145,30 @@ def generate_topup_input(context):
 
     log = logging.getLogger('[flywheel/fsl-topup/generate_topup_input]')
 
+    # Capture the paths of the input files from the gear context
     image1_path = context.get_input_path('image_1')
     image2_path = context.get_input_path('image_2')
     work_dir = context.work_dir
 
+    # Create a base directory in the context's working directory for image 1
     base_out1 = os.path.join(work_dir, 'Image1')
+
+    # If image 1 is 4D, we will only use the first volume (Assuming that a 4D image is fMRI and we only need one volume)
+    # TODO: Allow the user to choose which volume to use for topup correction
     if is4D(image1_path):
         im_name = os.path.split(image1_path)[-1]
         log.info('Using volume 1 in 4D image {}'.format(im_name))
 
+        # Generate a command to extract the first volume
         cmd = ['fslroi', image1_path, base_out1, '0', '1']
     else:
+        # If the image is 3D, simply copy the image to our working directory using fslmaths because it's extension agnostic
         cmd = ['fslmaths', image1_path, base_out1]
+
+    # Execute the command, resulting in a single volume from image_1 in the working directory
     exec_command(context, cmd)
 
+    # Repeat the same steps with image 2
     base_out2 = os.path.join(work_dir, 'Image2')
     if is4D(image2_path):
         im_name = os.path.split(image2_path)[-1]
@@ -223,6 +179,7 @@ def generate_topup_input(context):
         cmd = ['fslmaths', image2_path, base_out2]
     exec_command(context, cmd)
 
+    # Merge the two volumes (image_1 then image_2)
     merged = os.path.join(work_dir, 'topup_vols')
     cmd = ['fslmerge', '-t', merged, base_out1, base_out2]
     exec_command(context, cmd)
@@ -245,20 +202,23 @@ def run_topup(context, input):
 
     log = logging.getLogger('[flywheel/fsl-topup/run_topup]')
 
+    # Get the output directory and config file from the gear context
     output_dir = context.output_dir
     config_path = context.get_input_path('config_file')
+    acq_par = context.get_input_path('acquisition_parameters')
 
+    # If the user didn't provide a config file, use the default
     if not config_path:
         config_path = '/flywheel/v0/b02b0.cnf'
 
-    acq_par = context.get_input_path('acquisition_parameters')
 
+    # Setup output directories
     fout = os.path.join(output_dir, 'topup_fmap')
     iout = os.path.join(output_dir, 'topup_input_corrected')
     out = os.path.join(output_dir, 'topup')
-
     logout = os.path.join(output_dir, 'topup_log.txt')
 
+    # Get output options from the gear context (which commands to include in the topup call)
     dfout = context.config['displacement_field']
     jacout = context.config['jacobian_determinants']
     rbmout = context.config['rigid_body_matrix']
@@ -266,9 +226,11 @@ def run_topup(context, input):
     debug = context.config['topup_debug_level']
     # lout = context.config['mystery_output']
 
+    # Begin generating the command arguments with the default commands that are always present
     argument_dict = {'imain': input, 'datain': acq_par, 'out': out, 'fout': fout,
                      'iout': iout, 'logout': logout, 'config': config_path}
 
+    # Add the optional commands defined by the user in the config settings
     if dfout:
         argument_dict['dfout'] = out + '_dfield'
     if jacout:
@@ -280,8 +242,10 @@ def run_topup(context, input):
     if debug:
         argument_dict['debug'] = debug
 
+    # Print the config file settings to the log
     log.info('Using config settings:\n\n{}\n\n'.format(open(config_path, 'r').read()))
 
+    # Build the command and execute
     command = build_command_list(['topup'], argument_dict)
     exec_command(context, command)
 
@@ -303,14 +267,19 @@ def apply_topup(context, apply_topup_files, index_list, topup_out):
         output_files (list): a list of topup corrected files
 
     """
-    # applytopup - in = topdn - -topup = mytu - -inindex = 1 - -method = jac - -interp = spline - -out = hifi
-
+    # Get the acquisition parameter file for the "--datain" option of topup
     acq_par = context.get_input_path('acquisition_parameters')
     output_files = []
+
+    # For all the files we're applying topup to, loop through them with their associated row in the acquisition parameter file
     for fl, ix in zip(apply_topup_files, index_list):
+
+        # Generate an output name: "topup_corrected_" appended to the front of the original filename
         base = os.path.split(fl)[-1]
         output_file = os.path.join(context.output_dir, 'topup_corrected_{}'.format(base))
         output_files.append(output_file)
+
+        # Generate the applytopup command
         cmd = ['applytopup',
                '--imain={}'.format(fl),
                '--datain={}'.format(acq_par),
@@ -320,6 +289,7 @@ def apply_topup(context, apply_topup_files, index_list, topup_out):
                '--interp=spline',
                '--out={}'.format(output_file)]
 
+        # Execute the command
         exec_command(context, cmd)
 
     return (output_files)
@@ -391,6 +361,7 @@ def main():
                 corrected_files = apply_topup(gear_context, apply_to_files, index_list, topup_out)
         except Exception as e:
             raise Exception("Error applying topup to inputs") from e
+
 
         #TODO: Make this run on the input images, PLUS any corrected images
 
