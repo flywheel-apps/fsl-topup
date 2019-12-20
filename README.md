@@ -60,13 +60,13 @@ Depending on the settings in the gear's conguration, you will have some of the f
 #### *Output with **apply_to_X** options, and **topup_only** is false*
 * **topup_corrected_<apply_to_1>.nii.gz**: Topup corrected image from **apply_to_1**
 * **topup_corrected_<apply_to_2>.nii.gz**: Topup corrected image from **apply_to_2**
-note that if **image_1** and **image_2** are 4D, there will be additional files like these, which are the corrected inputs.  The basename for each input image is appended to the end of 'topup_corrected' *
+*note that if **image_1** and **image_2** are 4D, there will be additional files like these, which are the corrected inputs.  The basename for each input image is appended to the end of 'topup_corrected'*
 
 
 #### *Output with **QA***
 * **<image_1>_ QA_report.png**: QA image from **image_1**
 * **<image_2>_ QA_report.png**: QA image from **image_2**
-Presently only runs on files that have been corrected with topup.  Won't work if **topup_only** is true*
+*Presently only runs on files that have been corrected with topup.  Won't work if **topup_only** is true*
 
 
 #### *Output with **displacement_field***
