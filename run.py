@@ -392,6 +392,7 @@ def main():
         except Exception as e:
             raise Exception("Error applying topup to inputs") from e
 
+        #TODO: Make this run on the input images, PLUS any corrected images
 
         # Try to run topup QA
         try:
