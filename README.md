@@ -1,7 +1,7 @@
 # fsl-topup
 
 ## Background
-Diffusion imaging is typically performed using diffusion weighted spin-echo EPI images. These images will be very sensitive to non-zero off-resonance fields. Such fields will be caused by the susceptibility distribution of the subjects head (known as a susceptibility-induced off-resonance field) and by eddy currents (EC) from the rapid switching of the diffusion weighting gradients (known as an eddy current-induced off-resonance field). Topup is a tool for estimating the susceptibility induced field.
+Diffusion imaging is typically performed using diffusion weighted spin-echo EPI images. These images are very sensitive to off-resonance fields. Such fields are caused by the susceptibility distribution of the subjects head (known as a susceptibility-induced off-resonance field) and by eddy currents (EC) from the rapid switching of the diffusion weighting gradients (known as an eddy current-induced off-resonance field). Topup is a tool for estimating the susceptibility induced field.
 
 https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/topup
 
@@ -12,7 +12,7 @@ https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/topup
 [Graham 2017](https://www.ncbi.nlm.nih.gov/pubmed/28968429) M.S. Graham, I. Drobnjak, H. Zhang. Quantitative assessment of the susceptibility artefact and its interaction with motion in diffusion MRI. PLoS ONE, 12(10), 2017.
 
 ## Gear usage
-This gear currently uses two images that are sampled with different (ideally opposite) phase-encoding directions and calculates the topup fieldmap.  This gear optionally performs a topup correction on the two input images, and can also perform topup correction on two additional images.
+This gear currently uses two images that are sampled with different (ideally opposite) phase-encoding directions and calculates the topup field.  This gear optionally performs a topup correction on the two input images, and can also perform topup correction on two additional images.
 
 The gear allows you to choose a number of optional outputs besides the standard topup field approximation.
 The gear always runs topup with the *--out*, *--fout*, and *--iout* options.
@@ -34,7 +34,7 @@ The gear always runs topup with the *--out*, *--fout*, and *--iout* options.
 
 ### Config settings
 * **gear-log-level**: Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)
-* **topup_only**: only run topup and get fieldmaps (do no correct images, either 4D inputs, or additional **apply_to_X** images)
+* **topup_only**: only run topup and get fields (do no correct images, either 4D inputs, or additional **apply_to_X** images)
 * **displacement_field** save displacement fields (hidden topup option *--dfout*)
 * **jacobian_determinants** save jacobian determinants (hidden topup option *--jacout*)
 * **rigid_body_matrix** save rigid body transformation matricies to align volumes (hidden topup option *--rbmout*)
@@ -50,38 +50,38 @@ Depending on the settings in the gear's conguration, you will have some of the f
 
 
 #### *Constant Output*
-* **topup_log.txt**: topup's log file
-* **topup_fmap.nii.gz**: output-file containing the off-resonance field.
-* **topup_fieldcoef.nii.gz**: output-files containing the spline coefficients for the off-resonance field
-* **topup_movpar.txt**: The transformation parameters to fit **image_2** to **image_1**
-* **topup_input_corrected.nii.gz**: The corrected version of the merged **image_1** and **image_2** used for topup's *--imain* input option
+* **topup-log.txt**: topup's log file
+* **topup-fmap.nii.gz**: output-file containing the off-resonance field.
+* **topup-fieldcoef.nii.gz**: output-files containing the spline coefficients for the off-resonance field
+* **topup-movpar.txt**: The transformation parameters to fit **image_2** to **image_1**
+* **topup-input-corrected.nii.gz**: The corrected version of the merged **image_1** and **image_2** used for topup's *--imain* input option
 
 
 #### *Output with **apply_to_X** options, and **topup_only** is false*
-* **topup_corrected_<apply_to_1>.nii.gz**: Topup corrected image from **apply_to_1**
-* **topup_corrected_<apply_to_2>.nii.gz**: Topup corrected image from **apply_to_2**  
+* **topup-corrected-<apply_to_1>.nii.gz**: Topup corrected image from **apply_to_1**
+* **topup-corrected-<apply_to_2>.nii.gz**: Topup corrected image from **apply_to_2**
 *note that if **image_1** and **image_2** are 4D, there will be additional files like these, which are the corrected inputs.  The basename for each input image is appended to the end of 'topup_corrected'*
 
 
 #### *Output with **QA***
-* **<image_1>_ QA_report.png**: QA image from **image_1**
-* **<image_2>_ QA_report.png**: QA image from **image_2**  
+* **<image_1>-QA-report.png**: QA image from **image_1**
+* **<image_2>-QA-report.png**: QA image from **image_2**
 *Presently only runs on files that have been corrected with topup.  Won't work if **topup_only** is true*
 
 
 #### *Output with **displacement_field***
-* **topup_dfield_01.nii.gz**: warp field for **image_1**
-* **topup_dfield_02.nii.gz**: warp field for **image_2**
+* **topup-dfield-01.nii.gz**: warp field for **image_1**
+* **topup-dfield-02.nii.gz**: warp field for **image_2**
 
 
 #### *Output with **jacobian_determinants***
-* **topup_jacdet_01.nii.gz**: jacobian determinants for **image_1**
-* **topup_jacdet_02.nii.gz**: jacobian determinants for **image_2**
+* **topup-jacdet-01.nii.gz**: jacobian determinants for **image_1**
+* **topup-jacdet-02.nii.gz**: jacobian determinants for **image_2**
 
 
 #### *Output with **rigid_body_matrix***
-* **topup_rbmat_01.mat**: rigid body transformation parameters to fit **image_1** to **image_1** (should be identity)
-* **topup_rbmat_02.mat**: rigid body transformation parameters to fit **image_2** to **image_1**
+* **topup-rbmat-01.mat**: rigid body transformation parameters to fit **image_1** to **image_1** (should be identity)
+* **topup-rbmat-02.mat**: rigid body transformation parameters to fit **image_2** to **image_1**
 
 
 
