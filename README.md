@@ -34,7 +34,7 @@ The gear always runs topup with the *--out*, *--fout*, and *--iout* options.
 
 ### Config settings
 * **gear-log-level**: Gear Log verbosity level (ERROR|WARNING|INFO|DEBUG)
-* **topup_only**: only run topup and get fields (do no correct images, either 4D inputs, or additional **apply_to_X** images)
+* **topup_only**: only run topup and get correction fields (do no correct images, either 4D inputs, or additional **apply_to_X** images)
 * **displacement_field** save displacement fields (hidden topup option *--dfout*)
 * **jacobian_determinants** save jacobian determinants (hidden topup option *--jacout*)
 * **rigid_body_matrix** save rigid body transformation matricies to align volumes (hidden topup option *--rbmout*)
@@ -60,7 +60,7 @@ Depending on the settings in the gear's conguration, you will have some of the f
 #### *Output with **apply_to_X** options, and **topup_only** is false*
 * **topup-corrected-<apply_to_1>.nii.gz**: Topup corrected image from **apply_to_1**
 * **topup-corrected-<apply_to_2>.nii.gz**: Topup corrected image from **apply_to_2**
-*note that if **image_1** and **image_2** are 4D, there will be additional files like these, which are the corrected inputs.  The basename for each input image is appended to the end of 'topup_corrected'*
+*note that if **image-1** and **image-2** are 4D, this gear will also create TOPUP corrected versions of **image-1** and **image-2**.  The output name will be topup-corrected-<image-1>.
 
 
 #### *Output with **QA***

@@ -50,7 +50,7 @@ def build_command_list(command, ParamList, include_keys=True):
     return command
 
 
-def exec_command(context, command, shell=False, stdout_msg=None, cont_output=False):
+def exec_command(command, shell=False, stdout_msg=None, cont_output=False):
     """
     This is a generic abstraction to execute shell commands using the subprocess
     module. Parameters are

@@ -11,6 +11,16 @@ import numpy as np
 import mri_qa
 import shutil
 
+#### Setup logging as per SSE best practices
+try:
+    log = logging.getLogger('root')
+    FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+    logging.basicConfig(format=FORMAT)
+except Exception as e:
+    raise Exception("Error Setting up logger") from e
+
+
+
 ##-------- Standard Flywheel Gear Structure --------##
 flywheelv0 = "/flywheel/v0"
 environ_json = '/tmp/gear_environ.json'
@@ -20,8 +30,8 @@ environ_json = '/tmp/gear_environ.json'
 
 
 def set_environment(log):
-    """
-    Sets up the docker environment saved in a environment.json file
+    """Sets up the docker environment saved in a environment.json file
+
     Args:
         log (class:`logging.Logger`):
 
@@ -29,8 +39,7 @@ def set_environment(log):
         environ (json): the environment variables in json format
     """
 
-    # Let's ensure that we have our environment .json file and load it up
-    exists(environ_json, log)
+
 
     # If it exists, read the file in as a python dict with json.load
     with open(environ_json, 'r') as f:
@@ -47,8 +56,8 @@ def set_environment(log):
     return environ
 
 def is4D(image):
-    """
-    Checks to see if a given image is 4D
+    """Checks to see if a given image is 4D
+
     Args:
         image (str): path to image
 
@@ -66,9 +75,11 @@ def is4D(image):
 
 
 def check_inputs(context):
-    """
+    """Check gear inputs
+
     Checks the inputs of the gear and determines TOPUP run settings, and generates a list of files to apply TOPUP to
     (if indicated by the user)
+
     Args:
         context (class: `flywheel.gear_context.GearContext`): flywheel gear context
 
@@ -81,7 +92,6 @@ def check_inputs(context):
 
     log = logging.getLogger('[flywheel/fsl-topup/check_inputs]')
     apply_to_files = []
-    index_list = []
 
     # Capture all the inputs from the gear context
     image1_path = context.get_input_path('image_1')
@@ -93,28 +103,24 @@ def check_inputs(context):
 
     # If image_1 is 4D, we will apply topup correction to the entire series after running topup
     if is4D(image1_path):
-        apply_to_files.append(image1_path)
-        index_list.append('1') # Referring to the row this image is associated with in the "acquisition_parameters" file
+        apply_to_files.append((image1_path, '1')) # '1' Referring to the row this image is associated with in the "acquisition_parameters" file
         log.info('Will run applytopup on {}'.format(image1_path))
 
     # If image_2 is 4D, we will apply topup correction to the entire series after running topup
     if is4D(image2_path):
-        apply_to_files.append(image2_path)
-        index_list.append('2')
+        apply_to_files.append((image2_path,'2'))
         log.info('Will run applytopup on {}'.format(image2_path))
 
     # If apply_to_a is provided, applytopup to this image, too.
     # NOTE that apply_to_a must correspond to row 1 in the acquisition_parameters file
     if apply_to_a:
-        apply_to_files.append(apply_to_a)
-        index_list.append('1')
+        apply_to_files.append((apply_to_a,'1'))
         log.info('Will run applytopup on {}'.format(apply_to_a))
 
     # If apply_to_b is provided, applytopup to this image, too.
     # NOTE that apply_to_b must correspond to row 1 in the acquisition_parameters file
     if apply_to_b:
-        apply_to_files.append(apply_to_b)
-        index_list.append('2')
+        apply_to_files.append((apply_to_b,'2'))
         log.info('Will run applytopup on {}'.format(apply_to_b))
 
     # Read in the parameters and print them to the log
@@ -128,12 +134,12 @@ def check_inputs(context):
     else:
         log.info('Using default config values')
 
-    return (apply_to_files, index_list)
+    return (apply_to_files)
 
 
 def generate_topup_input(context):
-    """
-    Takes gear input files and generates a merged input file for TOPUP.
+    """Takes gear input files and generates a merged input file for TOPUP.
+
     Args:
         context (class: `flywheel.gear_context.GearContext`): flywheel gear context
 
@@ -166,7 +172,7 @@ def generate_topup_input(context):
         cmd = ['fslmaths', image1_path, base_out1]
 
     # Execute the command, resulting in a single volume from image_1 in the working directory
-    exec_command(context, cmd)
+    exec_command(cmd)
 
     # Repeat the same steps with image 2
     base_out2 = os.path.join(work_dir, 'Image2')
@@ -177,19 +183,21 @@ def generate_topup_input(context):
         cmd = ['fslroi', image2_path, base_out2, '0', '1']
     else:
         cmd = ['fslmaths', image2_path, base_out2]
-    exec_command(context, cmd)
+    exec_command(cmd)
 
     # Merge the two volumes (image_1 then image_2)
     merged = os.path.join(work_dir, 'topup_vols')
     cmd = ['fslmerge', '-t', merged, base_out1, base_out2]
-    exec_command(context, cmd)
+    exec_command(cmd)
 
     return (merged)
 
 
 def run_topup(context, input):
-    """
-    Runs topup on a given input image.  Requires acquisition parameters and input options from the gear context.
+    """Runs topup on a given input image.
+
+    Requires acquisition parameters and input options from the gear context.
+
     Args:
         context (class: `flywheel.gear_context.GearContext`): flywheel gear context
         input (string): the path to the input file for topup's 'imain' input option
@@ -213,10 +221,10 @@ def run_topup(context, input):
 
 
     # Setup output directories
-    fout = os.path.join(output_dir, 'topup_fmap')
-    iout = os.path.join(output_dir, 'topup_input_corrected')
+    fout = os.path.join(output_dir, 'topup-fmap')
+    iout = os.path.join(output_dir, 'topup-input-corrected')
     out = os.path.join(output_dir, 'topup')
-    logout = os.path.join(output_dir, 'topup_log.txt')
+    logout = os.path.join(output_dir, 'topup-log.txt')
 
     # Get output options from the gear context (which commands to include in the topup call)
     dfout = context.config['displacement_field']
@@ -232,11 +240,11 @@ def run_topup(context, input):
 
     # Add the optional commands defined by the user in the config settings
     if dfout:
-        argument_dict['dfout'] = out + '_dfield'
+        argument_dict['dfout'] = out + '-dfield'
     if jacout:
-        argument_dict['jacout'] = out + '_jacdet'
+        argument_dict['jacout'] = out + '-jacdet'
     if rbmout:
-        argument_dict['rbmout'] = out + '_rbmat'
+        argument_dict['rbmout'] = out + '-rbmat'
     if verbose:
         argument_dict['verbose'] = True
     if debug:
@@ -247,14 +255,14 @@ def run_topup(context, input):
 
     # Build the command and execute
     command = build_command_list(['topup'], argument_dict)
-    exec_command(context, command)
+    exec_command(command)
 
     return (out)
 
 
-def apply_topup(context, apply_topup_files, index_list, topup_out):
-    """
-    This function applies a calculated topup correction to a list of files.
+def apply_topup(context, apply_topup_files, topup_out):
+    """Applies a calculated topup correction to a list of files.
+
     Args:
         context (class: `flywheel.gear_context.GearContext`): flywheel gear context
         apply_topup_files (list): A list of files to apply topup correction to
@@ -272,11 +280,11 @@ def apply_topup(context, apply_topup_files, index_list, topup_out):
     output_files = []
 
     # For all the files we're applying topup to, loop through them with their associated row in the acquisition parameter file
-    for fl, ix in zip(apply_topup_files, index_list):
+    for fl, ix in apply_topup_files:
 
         # Generate an output name: "topup_corrected_" appended to the front of the original filename
         base = os.path.split(fl)[-1]
-        output_file = os.path.join(context.output_dir, 'topup_corrected_{}'.format(base))
+        output_file = os.path.join(context.output_dir, 'topup-corrected-{}'.format(base))
         output_files.append(output_file)
 
         # Generate the applytopup command
@@ -290,13 +298,14 @@ def apply_topup(context, apply_topup_files, index_list, topup_out):
                '--out={}'.format(output_file)]
 
         # Execute the command
-        exec_command(context, cmd)
+        exec_command(cmd)
 
     return (output_files)
 
 
 def main():
-    """
+    """Main TOPUP correction script
+
     This script runs TOPUP on two images provided in the gear. It will apply the calculated topup correction to the
     inputs, as well as two additional files you provide, "apply_to_1" and "apply_to_2".  The image "apply_to_1" must
     have the same PE direction as "Image_1", and "apply_to_2" must have the same PE direction as "Image_2".
@@ -308,16 +317,7 @@ def main():
     # shutil.copy('config.json','/flywheel/v0/output/config.json')
     with flywheel.gear_context.GearContext() as gear_context:
 
-        #### Setup logging as per SSE best practices
-        try:
-            fmt = '%(asctime)s %(levelname)8s %(name)-8s - %(message)s'
-            logging.basicConfig(level=gear_context.config['gear-log-level'], format=fmt)
-            log = logging.getLogger('[flywheel/fsl-topup]')
-            log.info('log level is ' + gear_context.config['gear-log-level'])
-            gear_context.log_config()  # not configuring the log but logging the config
-        except Exception as e:
-            raise Exception("Error Setting up logger") from e
-
+        gear_context.log_config()  # not configuring the log but logging the config
 
         # Now let's set up our environment from the .json file stored in the docker image:
         log.info('setting up gear environment')
@@ -333,7 +333,7 @@ def main():
         # Check the inputs and categorize files
         log.info('Checking inputs')
         try:
-            apply_to_files, index_list = check_inputs(gear_context)
+            apply_to_files = check_inputs(gear_context)
         except Exception as e:
             raise Exception("Error with input validation") from e
 
@@ -358,7 +358,7 @@ def main():
         try:
             if not gear_context.config['topup_only']:
                 log.info('Applying Topup Correction')
-                corrected_files = apply_topup(gear_context, apply_to_files, index_list, topup_out)
+                corrected_files = apply_topup(gear_context, apply_to_files, topup_out)
         except Exception as e:
             raise Exception("Error applying topup to inputs") from e
 
@@ -369,10 +369,16 @@ def main():
         try:
             if gear_context.config['QA']:
                 log.info('Running Topup QA')
-                for original, corrected in zip(apply_to_files, corrected_files):
+                for original, corrected in apply_to_files:
                     report_out = mri_qa.generate_topup_report(original, corrected, work_dir)
                     report_dir, report_base = os.path.split(report_out)
                     shutil.move(report_out, os.path.join(output_dir, report_base))
+
+                    # Move the config file used in the analysis to the output
+                    config_path = gear_context.get_input_path('config_file')
+                    config_out = os.path.join(output_dir,'config_file.txt')
+                    shutil.move(config_path,config_out)
+
         except Exception as e:
             raise Exception("Error running topup QC") from e
 
