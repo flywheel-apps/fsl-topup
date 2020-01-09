@@ -14,7 +14,7 @@ import shutil
 #### Setup logging as per SSE best practices
 try:
 
-    FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+    FORMAT = "[ %(asctime)8s%(levelname)8s%(filename)s:%(lineno)s - %(funcName)8s() ] %(message)s"
     logging.basicConfig(format=FORMAT)
     log = logging.getLogger()
 except Exception as e:
