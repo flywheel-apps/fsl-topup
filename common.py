@@ -8,8 +8,7 @@ import os, os.path as op
 import subprocess as sp
 import re
 import logging
-
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 def build_command_list(command, ParamList, include_keys=True):
@@ -61,7 +60,6 @@ def exec_command(command, shell=False, stdout_msg=None, cont_output=False):
     - cont_output: Used to provide continuous output of stdout without waiting
                    until the completion of the shell command
     """
-    log = logging.getLogger('[flywheel/fsl-topup/common/exec_command]')
     log.info('Executing command: \n' + ' '.join(command) + '\n\n')
 
     if shell:

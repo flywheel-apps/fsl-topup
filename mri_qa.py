@@ -7,6 +7,9 @@ import matplotlib.pyplot as pl
 import matplotlib.image as mpm
 
 fsldir='/usr/lib/fsl/5.0'
+log = logging.getLogger()
+
+
 
 def bet(image,workdir,shell=False):
     """
@@ -203,7 +206,6 @@ def plot_overlays(files, titles, output):
 
     """
 
-    log = logging.getLogger('[flywheel/fsl-topup/mri_qa/plot_overlays]')
     if not len(files) == len(titles):
         log.warning('Number of files different than number of provided titles')
         return
@@ -238,7 +240,6 @@ def generate_topup_report(original_image, corrected_image, output_base=''):
         report_out (str): The path to the final QA image
     """
 
-    log = logging.getLogger('[flywheel/fsl-topup/mri_qa/generate_topup_report]')
 
     path, original_base = os.path.split(original_image)
 

@@ -13,9 +13,10 @@ import shutil
 
 #### Setup logging as per SSE best practices
 try:
-    log = logging.getLogger('root')
+
     FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
     logging.basicConfig(format=FORMAT)
+    log = logging.getLogger()
 except Exception as e:
     raise Exception("Error Setting up logger") from e
 
@@ -90,7 +91,6 @@ def check_inputs(context):
 
 
 
-    log = logging.getLogger('[flywheel/fsl-topup/check_inputs]')
     apply_to_files = []
 
     # Capture all the inputs from the gear context
@@ -149,7 +149,6 @@ def generate_topup_input(context):
     """
 
 
-    log = logging.getLogger('[flywheel/fsl-topup/generate_topup_input]')
 
     # Capture the paths of the input files from the gear context
     image1_path = context.get_input_path('image_1')
@@ -208,7 +207,6 @@ def run_topup(context, input):
     """
 
 
-    log = logging.getLogger('[flywheel/fsl-topup/run_topup]')
 
     # Get the output directory and config file from the gear context
     output_dir = context.output_dir
@@ -316,6 +314,7 @@ def main():
 
     # shutil.copy('config.json','/flywheel/v0/output/config.json')
     with flywheel.gear_context.GearContext() as gear_context:
+        log.setLevel(gear_context.config['gear-log-level'])
 
         gear_context.log_config()  # not configuring the log but logging the config
 
