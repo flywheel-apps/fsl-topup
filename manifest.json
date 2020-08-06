@@ -107,7 +107,7 @@
       "type": "boolean"
     },
     "topup_debug_level": {
-      "default": "0",
+      "default": 0,
       "description": "Topup Log verbosity level (0|1|2|3)",
       "type": "integer",
       "enum": [
