@@ -16,13 +16,17 @@ RUN apt-get -qq update && apt-get -qq install -y \
     libreadline-gplv2-dev libncursesw5-dev libssl-dev  libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY b02b0.cnf /flywheel/v0/b02b0.cnf
+ENV FLYWHEEL /flywheel/v0
+COPY b02b0.cnf ${FLYWHEEL}/b02b0.cnf
+COPY common.py ${FLYWHEEL}/b02b0.cnf
+COPY mri_qa.py ${FLYWHEEL}/mri_qa.py
+
 COPY requirements.txt ./requirements.txt
 RUN pip3 install -r requirements.txt && rm -rf /root/.cache/pip
 
 
 # Make directory for flywheel spec (v0)
-ENV FLYWHEEL /flywheel/v0
+
 WORKDIR ${FLYWHEEL}
 
 # Save the environment for later use in the Run script (run.py)
