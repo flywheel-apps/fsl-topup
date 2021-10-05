@@ -124,5 +124,5 @@
       "type": "boolean"
     }
   },
-  "command": "python3 run.py"
+  "command": "python3.6 run.py"
 }

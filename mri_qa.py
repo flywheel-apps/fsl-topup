@@ -5,6 +5,7 @@ import subprocess as sp
 import logging
 import matplotlib.pyplot as pl
 import matplotlib.image as mpm
+pl.switch_backend('agg')
 
 fsldir='/usr/lib/fsl/5.0'
 log = logging.getLogger()
@@ -249,7 +250,7 @@ def generate_topup_report(original_image, corrected_image, output_base=''):
     original_base = original_base[:original_base.find('.nii.gz')]
 
     log.info('overlay 1')
-    name1 = os.path.join(output_base,'corrected_over_original')
+    name1 = os.path.join(output_base, 'corrected_over_original')
     outline_overlay(original_image, corrected_image, name1)
 
     log.info('overlay 2')

@@ -11,6 +11,8 @@ import numpy as np
 import mri_qa
 import shutil
 
+
+
 #### Setup logging as per SSE best practices
 try:
 
@@ -28,7 +30,7 @@ environ_json = '/tmp/gear_environ.json'
 
 
 ##--------    Gear Specific files/folders   --------##
-
+DEFAULT_CONFIG = '/flywheel/v0/b02b0.cnf'
 
 def set_environment(log):
     """Sets up the docker environment saved in a environment.json file
@@ -118,7 +120,7 @@ def check_inputs(context):
         log.info('Will run applytopup on {}'.format(apply_to_a))
 
     # If apply_to_b is provided, applytopup to this image, too.
-    # NOTE that apply_to_b must correspond to row 1 in the acquisition_parameters file
+    # NOTE that apply_to_b must correspond to row 2 in the acquisition_parameters file
     if apply_to_b:
         apply_to_files.append((apply_to_b,'2'))
         log.info('Will run applytopup on {}'.format(apply_to_b))
@@ -215,8 +217,7 @@ def run_topup(context, input):
 
     # If the user didn't provide a config file, use the default
     if not config_path:
-        config_path = '/flywheel/v0/b02b0.cnf'
-
+        config_path = DEFAULT_CONFIG
 
     # Setup output directories
     fout = os.path.join(output_dir, 'topup-fmap')
@@ -365,18 +366,25 @@ def main():
         #TODO: Make this run on the input images, PLUS any corrected images
 
         # Try to run topup QA
+        # apply_to_files is currently a list of [(filename, index), ... ].  We need to combine this
+        # with corected files so that we have [(original file, corrected file), ... ]
+        file_comparison = [(apply_to_files[i][0], corrected_files[i]) for i in range(len(corrected_files))]
+
         try:
             if gear_context.config['QA']:
                 log.info('Running Topup QA')
-                for original, corrected in apply_to_files:
+                for original, corrected in file_comparison:
                     report_out = mri_qa.generate_topup_report(original, corrected, work_dir)
                     report_dir, report_base = os.path.split(report_out)
                     shutil.move(report_out, os.path.join(output_dir, report_base))
 
                     # Move the config file used in the analysis to the output
                     config_path = gear_context.get_input_path('config_file')
-                    config_out = os.path.join(output_dir,'config_file.txt')
-                    shutil.move(config_path,config_out)
+                    config_out = os.path.join(output_dir, 'config_file.txt')
+
+                    if not config_path:
+                        config_path = DEFAULT_CONFIG
+                    shutil.move(config_path, config_out)
 
         except Exception as e:
             raise Exception("Error running topup QC") from e
