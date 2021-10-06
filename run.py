@@ -381,16 +381,16 @@ def main():
 
                     # Move the config file used in the analysis to the output
                     config_path = gear_context.get_input_path('config_file')
-                    config_out = os.path.join(output_dir, 'config_file.txt')
 
+                    # If this wasn't provided as input, save to output for provenance.
                     if not config_path:
                         config_path = DEFAULT_CONFIG
-                    if os.path.exists(config_path):
-                        shutil.move(config_path, config_out)
-                    else:
-                        log.info(f'no path {config_path}')
-                        exec_command(['ls', '-l', '/'])
-                        exec_command(['ls','-l','/flywheel/v0'])
+                        config_out = os.path.join(output_dir, 'config_file.txt')
+                        if os.path.exists(config_path):
+                            shutil.move(config_path, config_out)
+                        else:
+                            log.info(f'no path {config_path}')
+
 
         except Exception as e:
             raise Exception("Error running topup QC") from e
