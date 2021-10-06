@@ -354,6 +354,7 @@ def main():
             raise Exception("Error running topup") from e
 
 
+
         # Try to apply topup to input files
         try:
             if not gear_context.config['topup_only']:
@@ -367,7 +368,7 @@ def main():
 
         # Try to run topup QA
         # apply_to_files is currently a list of [(filename, index), ... ].  We need to combine this
-        # with corected files so that we have [(original file, corrected file), ... ]
+        # with corrected files so that we have [(original file, corrected file), ... ]
         file_comparison = [(apply_to_files[i][0], corrected_files[i]) for i in range(len(corrected_files))]
 
         try:
@@ -384,7 +385,12 @@ def main():
 
                     if not config_path:
                         config_path = DEFAULT_CONFIG
-                    shutil.move(config_path, config_out)
+                    if os.path.exists(config_path):
+                        shutil.move(config_path, config_out)
+                    else:
+                        log.info(f'no path {config_path}')
+                        exec_command(['ls', '-l', '/'])
+                        exec_command(['ls','-l','/flywheel/v0'])
 
         except Exception as e:
             raise Exception("Error running topup QC") from e

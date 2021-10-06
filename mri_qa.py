@@ -25,18 +25,21 @@ def bet(image,workdir,shell=False):
 
 
 
-    com_cmd=['{}/fslstats'.format(fsldir),image, '-C']
+    com_cmd = ['{}/fslstats'.format(fsldir), image, '-C']
+
     print(' '.join(com_cmd))
-    com_cmd=' '.join(com_cmd)
+    com_cmd = ' '.join(com_cmd)
 
     result = sp.Popen(com_cmd, stdout=sp.PIPE, stderr=sp.PIPE,
                       universal_newlines=True, shell=shell)
 
-    out,err=result.communicate()
-    center_of_mass=out.rstrip()
+    out, err = result.communicate()
+    print(out)
+    print(err)
+    center_of_mass = out.rstrip()
 
-    bet_out=os.path.join(workdir,'bet')
-    bet_cmd = ['{}/bet2'.format(fsldir),image,bet_out,'-o', '-m', '-t','-f','0.5','-w','0.4','-c',center_of_mass]
+    bet_out = os.path.join(workdir, 'bet')
+    bet_cmd = ['{}/bet2'.format(fsldir), image, bet_out, '-o', '-m', '-t', '-f', '0.5', '-w', '0.4', '-c', center_of_mass]
     print(' '.join(bet_cmd))
     bet_cmd = ' '.join(bet_cmd)
     result = sp.Popen(bet_cmd, stdout=sp.PIPE, stderr=sp.PIPE,
@@ -265,22 +268,52 @@ def generate_topup_report(original_image, corrected_image, output_base=''):
 
 
 
-def debug():
-    background = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/Image1.nii.gz'
-    outline = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/output/topup_corrected_nodif.nii.gz'
-    name1 = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/topup_over_orig'
-    outline_overlay(background, outline, name1)
+# def debug1():
+#     background = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/Image1.nii.gz'
+#     outline = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/output/topup_corrected_nodif.nii.gz'
+#     name1 = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/topup_over_orig'
+#     outline_overlay(background, outline, name1)
+#
+#     name2 = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/orig_over_topup'
+#     outline_overlay(outline, background, name2)
+#
+#     report_out = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/report_out.png'
+#     plot_overlays([name1, name2], ['topup (red) over original', 'original (red) over topup'], report_out)
 
-    name2 = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/orig_over_topup'
-    outline_overlay(outline,background,name2)
 
-    report_out = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/report_out.png'
-    plot_overlays([name1,name2], ['topup (red) over original','original (red) over topup'], report_out)
+def debug2():
+    #cmd = "drun -v /Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/fsl-topup:/flywheel/v0 flywheel/fsl-topup:0.0.4"
+    import shutil
+
+    # file_comparison = [(apply_to_files[i][0], corrected_files[i]) for i in range(len(corrected_files))]
+
+    file_comparison = [('/flywheel/v0/work/Image1.nii.gz', '/flywheel/v0/output/topup-corrected-nodif.nii.gz'), ('/flywheel/v0/work/Image2.nii.gz', '/flywheel/v0/output/topup-corrected-nodif_PA.nii.gz')]
+    log.info('Running Topup QA')
+
+    work_dir = '/flywheel/v0/work'
+    output_dir = '/flywheel/v0/output'
+
+    for original, corrected in file_comparison:
+        report_out = generate_topup_report(original, corrected, work_dir)
+        report_dir, report_base = os.path.split(report_out)
+        shutil.move(report_out, os.path.join(output_dir, report_base))
+
+        # Move the config file used in the analysis to the output
+        config_path = '/flywheel/v0/output/config_file.txt'
+        config_out =  '/flywheel/v0/output/config_file.txt'
+
+        if not config_path:
+            config_path = DEFAULT_CONFIG
+        if os.path.exists(config_path):
+            shutil.move(config_path, config_out)
+        else:
+            log.info(f'no path {config_path}')
+            exec_command(['ls', '-l', '/'])
+            exec_command(['ls', '-l', '/flywheel'])
+            exec_command(['ls', '-l', '/flywheel/v0'])
 
 
 if __name__ == '__main__':
-    debug()
-
-
+    debug2()
 
 
