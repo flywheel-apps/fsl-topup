@@ -96,5 +96,6 @@ def exec_command(command, shell=False, stdout_msg=None, cont_output=False):
     if result.returncode != 0:
         log.error('The command:\n ' +
                   ' '.join(command) +
-                  '\nfailed.')
+                  '\nfailed. with:\n' +
+                  stderr)
         raise Exception(stderr)
