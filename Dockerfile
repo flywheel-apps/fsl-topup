@@ -20,7 +20,7 @@ RUN . venv/bin/activate && \
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
 RUN mkdir -p $FLYWHEEL
-COPY b02b0_bk.cnf ${FLYWHEEL}/b02b0.cnf
+COPY b02b0.cnf ${FLYWHEEL}/b02b0.cnf
 COPY common.py ${FLYWHEEL}/common.py
 COPY mri_qa.py ${FLYWHEEL}/mri_qa.py
 WORKDIR ${FLYWHEEL}
