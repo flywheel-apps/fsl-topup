@@ -1,4 +1,4 @@
-matplotlib==2.2.5
+matplotlib==3.4.3
 flywheel-sdk==10.0.1
-nibabel==2.5.1
-numpy==1.19.5
+nibabel==3.2.1
+numpy==1.21.2
