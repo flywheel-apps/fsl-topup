@@ -4,7 +4,7 @@
 #
 
 # First start with a python runtime
-FROM flywheel/fsl-base:5.0-xenial
+FROM flywheel/fsl-base:5.0_1.0.0-xenial
 
 # This is setting things up for python
 RUN apt-get -qq update && apt-get -qq install -y \
